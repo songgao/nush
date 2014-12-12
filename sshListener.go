@@ -1,7 +1,6 @@
 package nush
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -39,7 +38,6 @@ func (l *SSHListener) accept() {
 		go ssh.DiscardRequests(reqs)
 		go func(chans <-chan ssh.NewChannel) {
 			for channel := range chans {
-				fmt.Println(channel.ChannelType())
 				if channel.ChannelType() != "session" {
 					channel.Reject(ssh.UnknownChannelType, "unknown channel type")
 					continue
@@ -50,7 +48,6 @@ func (l *SSHListener) accept() {
 				}
 				go func(requests <-chan *ssh.Request) {
 					for req := range requests {
-						fmt.Println(req.Type)
 						if (req.Type == "shell" && len(req.Payload) == 0) || req.Type == "pty-req" {
 							req.Reply(true, nil)
 						} else {
