@@ -2,7 +2,6 @@ package nush
 
 import (
 	"io"
-	"log"
 	"net"
 
 	"golang.org/x/crypto/ssh"
@@ -27,12 +26,14 @@ func NewSSHListener(config *ssh.ServerConfig, laddr string) (*SSHListener, error
 func (l *SSHListener) accept() {
 	for {
 		conn, err := l.listener.Accept()
+		logger.Printf("new SSH connection from: %v", conn.RemoteAddr())
 		if err != nil {
-			log.Println(err)
+			logger.Println(err)
 			continue
 		}
 		_, chans, reqs, err := ssh.NewServerConn(conn, l.config)
 		if err != nil {
+			logger.Println(err)
 			continue
 		}
 		go ssh.DiscardRequests(reqs)

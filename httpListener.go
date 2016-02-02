@@ -13,12 +13,12 @@ type HTTPListener struct {
 	ch chan *socketIOStream
 }
 
-func NewHTTPListener() (*HTTPListener, *http.ServeMux, error) {
+func NewHTTPListener(mux *http.ServeMux) (*HTTPListener, error) {
 	httpListener := new(HTTPListener)
 	httpListener.ch = make(chan *socketIOStream)
 	server, err := socketio.NewServer(nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	server.On("connection", func(socket socketio.Socket) {
 		httpListener.ch <- newSocketIOStream(socket)
@@ -26,9 +26,8 @@ func NewHTTPListener() (*HTTPListener, *http.ServeMux, error) {
 	server.On("error", func(socket socketio.Socket, err error) {
 		log.Println(err)
 	})
-	mux := http.NewServeMux()
 	mux.Handle("/socket.io/", server)
-	return httpListener, mux, nil
+	return httpListener, nil
 }
 
 func (l *HTTPListener) Accept() io.ReadWriteCloser {
