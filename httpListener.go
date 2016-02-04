@@ -1,6 +1,7 @@
 package nush
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -10,18 +11,18 @@ import (
 )
 
 type HTTPListener struct {
-	ch chan *socketIOStream
+	ch chan *Session
 }
 
 func NewHTTPListener(mux *http.ServeMux) (*HTTPListener, error) {
 	httpListener := new(HTTPListener)
-	httpListener.ch = make(chan *socketIOStream)
+	httpListener.ch = make(chan *Session)
 	server, err := socketio.NewServer(nil)
 	if err != nil {
 		return nil, err
 	}
 	server.On("connection", func(socket socketio.Socket) {
-		httpListener.ch <- newSocketIOStream(socket)
+		httpListener.ch <- &Session{Stream: newSocketIOStream(socket), Context: fmt.Sprintf("http-%v-%s", socket.Request().URL, socket.Id())}
 	})
 	server.On("error", func(socket socketio.Socket, err error) {
 		log.Println(err)
@@ -30,7 +31,7 @@ func NewHTTPListener(mux *http.ServeMux) (*HTTPListener, error) {
 	return httpListener, nil
 }
 
-func (l *HTTPListener) Accept() io.ReadWriteCloser {
+func (l *HTTPListener) Accept() *Session {
 	return <-l.ch
 }
 

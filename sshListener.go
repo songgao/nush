@@ -1,7 +1,7 @@
 package nush
 
 import (
-	"io"
+	"fmt"
 	"net"
 
 	"golang.org/x/crypto/ssh"
@@ -10,14 +10,14 @@ import (
 type SSHListener struct {
 	listener net.Listener
 	config   *ssh.ServerConfig
-	ch       chan ssh.Channel
+	ch       chan *Session
 }
 
 func NewSSHListener(config *ssh.ServerConfig, laddr string) (*SSHListener, error) {
 	var err error
 	l := new(SSHListener)
 	l.config = config
-	l.ch = make(chan ssh.Channel)
+	l.ch = make(chan *Session)
 	l.listener, err = net.Listen("tcp", laddr)
 	go l.accept()
 	return l, err
@@ -38,6 +38,7 @@ func (l *SSHListener) accept() {
 		}
 		go ssh.DiscardRequests(reqs)
 		go func(chans <-chan ssh.NewChannel) {
+			channelCount := 0
 			for channel := range chans {
 				if channel.ChannelType() != "session" {
 					channel.Reject(ssh.UnknownChannelType, "unknown channel type")
@@ -56,12 +57,13 @@ func (l *SSHListener) accept() {
 						}
 					}
 				}(r)
-				l.ch <- c
+				l.ch <- &Session{Stream: c, Context: fmt.Sprintf("SSH-%v-%d", conn.RemoteAddr(), channelCount)}
+				channelCount++
 			}
 		}(chans)
 	}
 }
 
-func (l *SSHListener) Accept() io.ReadWriteCloser {
+func (l *SSHListener) Accept() *Session {
 	return <-l.ch
 }
